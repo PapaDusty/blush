@@ -130,8 +130,8 @@ local FONT_BOLD   = Enum.Font.BuilderSansExtraBold
 
 -- Every text size in the library goes through T(): Library._textBoost grows/shrinks
 -- all text at once (changed live by the Text Size slider in the settings).
-Library._textBoost = 2
-local function T(n) return n + (Library._textBoost or 2) end
+Library._textBoost = 0
+local function T(n) return n + (Library._textBoost or 0) end
 
 --============================================================================
 -- ACCENT REGISTRY
