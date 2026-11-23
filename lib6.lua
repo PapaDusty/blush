@@ -237,14 +237,6 @@ local Icons = {
     arrowRight = "rbxassetid://126507964682213",
     resize     = "rbxassetid://90927792586571",
 
-    -- >>> put your own ids here (or pass Icon = "rbxassetid://..." / a number anywhere) <<<
-    home      = "",
-    search    = "",
-    user      = "",
-    sparkle   = "",
-    sliders   = "",
-    shield    = "",
-    dot       = "",
 }
 Library.Icons = Icons
 
@@ -566,17 +558,19 @@ local function createToggle(host, opts)
     new("UICorner", { CornerRadius = UDim.new(0, 5) }, box)
 
     local check = new("ImageLabel", {
-        BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(10, 10),
         Image = "rbxassetid://83827110621355", ImageColor3 = Color3.new(0, 0, 0),
         ImageTransparency = 1,
     }, box)
+    local boxGlow = new("UIStroke", { Color = Theme.Accent, Thickness = 1.5, Transparency = 1 }, box)
 
     local labelColor = opts.Danger and Theme.Danger or Theme.Text
     local label = new("TextLabel", {
         BackgroundTransparency = 1,
         Position = UDim2.new(0, opts.CheckboxRight and 0 or 28, 0, 0),
         Size = UDim2.new(1, -28, 1, 0),
-        Font = FONT_MED, TextSize = T(14), TextColor3 = labelColor,
+        Font = FONT_MED, TextSize = T(host.TextBase or 14), TextColor3 = labelColor,
         TextXAlignment = Enum.TextXAlignment.Left, Text = opts.Name or "Toggle",
     }, row)
 
@@ -613,16 +607,17 @@ local function createToggle(host, opts)
         if value then
             tween(box, { BackgroundColor3 = Theme.Accent }, t)
             tween(check, { ImageTransparency = 0 }, t)
+            tween(boxGlow, { Transparency = 0.35 }, t)
         else
             tween(box, { BackgroundColor3 = Theme.Input }, t)
             tween(check, { ImageTransparency = 1 }, t)
+            tween(boxGlow, { Transparency = 1 }, t)
         end
     end
 
     onAccentChange(function(c)
-        if value then
-            if box and box.Parent then box.BackgroundColor3 = c end
-        end
+        if box and box.Parent then box.BackgroundColor3 = value and c or Theme.Input end
+        if boxGlow.Parent then boxGlow.Color = c end
     end)
 
     function control:Set(v)
@@ -781,7 +776,7 @@ local function createSlider(host, opts)
 
     local label = new("TextLabel", {
         BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(1, -64, 0, 22), Font = FONT_MED, TextSize = T(14),
+        Size = UDim2.new(1, -64, 0, 22), Font = FONT_MED, TextSize = T(host.TextBase or 14),
         TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left,
         Text = opts.Name or "Slider",
     }, row)
@@ -789,7 +784,7 @@ local function createSlider(host, opts)
     local valueLbl = new("TextLabel", {
         BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 64, 0, 22),
-        Font = FONT_MED, TextSize = T(14), TextColor3 = Theme.Muted,
+        Font = FONT_MED, TextSize = T(host.TextBase or 14), TextColor3 = Theme.Muted,
         TextXAlignment = Enum.TextXAlignment.Right, Text = "",
     }, row)
 
@@ -808,15 +803,17 @@ local function createSlider(host, opts)
         BackgroundColor3 = Theme.Accent, Size = UDim2.new(0, 0, 1, 0),
     }, track)
     new("UICorner", { CornerRadius = UDim.new(1, 0) }, fill)
+    local fillGlow = new("UIStroke", { Color = Theme.Accent, Thickness = 1.5, Transparency = 0.4 }, fill)
 
     local thumb = new("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0),
-        Size = UDim2.fromOffset(14, 14), BackgroundColor3 = Color3.new(1, 1, 1),
+        Size = UDim2.fromOffset(11, 11), BackgroundColor3 = Color3.new(1, 1, 1),
     }, track)
     new("UICorner", { CornerRadius = UDim.new(1, 0) }, thumb)
 
     onAccentChange(function(c)
         if fill and fill.Parent then fill.BackgroundColor3 = c end
+        if fillGlow.Parent then fillGlow.Color = c end
     end)
 
     local control = { Frame = row, Flag = flag }
@@ -867,14 +864,14 @@ local function createSlider(host, opts)
             or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             updateFromX(input.Position.X)
-            tween(thumb, { Size = UDim2.fromOffset(16, 16) }, 0.1)
+            tween(thumb, { Size = UDim2.fromOffset(13, 13) }, 0.1)
         end
     end)
     connect(hit.MouseEnter, function()
-        tween(thumb, { Size = UDim2.fromOffset(16, 16) }, 0.12)
+        tween(thumb, { Size = UDim2.fromOffset(13, 13) }, 0.12)
     end)
     connect(hit.MouseLeave, function()
-        if not dragging then tween(thumb, { Size = UDim2.fromOffset(14, 14) }, 0.12) end
+        if not dragging then tween(thumb, { Size = UDim2.fromOffset(11, 11) }, 0.12) end
     end)
     connect(UserInputService.InputChanged, function(input)
         if not dragging then return end
@@ -888,7 +885,7 @@ local function createSlider(host, opts)
             or input.UserInputType == Enum.UserInputType.Touch then
             if dragging then
                 dragging = false
-                tween(thumb, { Size = UDim2.fromOffset(14, 14) }, 0.12)
+                tween(thumb, { Size = UDim2.fromOffset(11, 11) }, 0.12)
             end
         end
     end)
@@ -912,10 +909,10 @@ local function createDropdown(host, opts)
 
     local nameLbl = new("TextLabel", {
         BackgroundTransparency = 1, Size = UDim2.new(0, 0, 1, 0),
-        Font = FONT_MED, TextSize = T(14), TextColor3 = Theme.Text,
+        Font = FONT_MED, TextSize = T(host.TextBase or 14), TextColor3 = Theme.Text,
         TextXAlignment = Enum.TextXAlignment.Left, Text = opts.Name or "Dropdown",
     }, row)
-    local nameW = textWidth(nameLbl.Text, T(14), FONT_MED) + 8
+    local nameW = textWidth(nameLbl.Text, T(host.TextBase or 14), FONT_MED) + 8
     nameLbl.Size = UDim2.new(0, nameW, 1, 0)
 
     local box = new("TextButton", {
@@ -927,7 +924,7 @@ local function createDropdown(host, opts)
 
     local selLbl = new("TextLabel", {
         BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0),
-        Size = UDim2.new(1, -34, 1, 0), Font = FONT_MED, TextSize = T(14),
+        Size = UDim2.new(1, -34, 1, 0), Font = FONT_MED, TextSize = T(host.TextBase or 14),
         TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Text = "",
     }, box)
 
@@ -1023,7 +1020,7 @@ local function createDropdown(host, opts)
 
             local lbl = new("TextLabel", {
                 BackgroundTransparency = 1, Position = UDim2.new(0, 6, 0, 0),
-                Size = UDim2.new(1, -12, 1, 0), Font = FONT_MED, TextSize = T(14),
+                Size = UDim2.new(1, -12, 1, 0), Font = FONT_MED, TextSize = T(host.TextBase or 14),
                 TextColor3 = isSel and Theme.Accent or Theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Left, Text = optStr, ZIndex = 632,
             }, item)
@@ -1191,13 +1188,13 @@ local function createButton(host, opts)
 
     local btn = new("TextButton", {
         BackgroundColor3 = Theme.Input, Size = UDim2.fromScale(1, 1),
-        AutoButtonColor = false, Text = "", TextSize = T(14), Font = FONT_MED,
+        AutoButtonColor = false, Text = "", TextSize = T(host.TextBase or 14), Font = FONT_MED,
         TextColor3 = Theme.Text,
     }, row)
     new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn)
     new("TextLabel", {
         BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
-        Font = FONT_MED, TextSize = T(14),
+        Font = FONT_MED, TextSize = T(host.TextBase or 14),
         TextColor3 = opts.Danger and Theme.Danger or Theme.Text,
         Text = opts.Name or "Button",
     }, btn)
@@ -2021,14 +2018,12 @@ function Library:CreateWindow(opts)
             Text = "", AutoButtonColor = false, Visible = false, ZIndex = 59,
         }, content)
 
-        -- parented to the gui (not the window) so nothing clips or blocks it
         local popup = new("CanvasGroup", {
             Name = "Settings",
-            AnchorPoint = Vector2.new(1, 0),
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, HEADER_H + 4),
             Size = UDim2.new(0, POPUP_W, 0, 0), ClipsDescendants = true,
-            BackgroundColor3 = Theme.Card, Visible = false, ZIndex = 610,
-        }, gui)
-        local popScale = new("UIScale", { Scale = Library._scale or 1 }, popup)
+            BackgroundColor3 = Theme.Card, Visible = false, ZIndex = 60,
+        }, content)
         new("UICorner", { CornerRadius = UDim.new(0, 10) }, popup)
 
         local rowsFrame = new("Frame", {
@@ -2041,7 +2036,7 @@ function Library:CreateWindow(opts)
         }, rowsFrame)
         new("UIListLayout", { Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder }, rowsFrame)
 
-        local host = extend({ RowsFrame = rowsFrame, _rows = {} }, ControlMethods)
+        local host = extend({ RowsFrame = rowsFrame, _rows = {}, TextBase = 13 }, ControlMethods)
 
         -- keep the popup tall enough when an inline dropdown expands inside it
         connect(rowsFrame:GetPropertyChangedSignal("AbsoluteSize"), function()
@@ -2076,7 +2071,7 @@ function Library:CreateWindow(opts)
                 PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
             }, subRows)
             new("UIListLayout", { Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder }, subRows)
-            local subHost = extend({ RowsFrame = subRows, _rows = {} }, ControlMethods)
+            local subHost = extend({ RowsFrame = subRows, _rows = {}, TextBase = 13 }, ControlMethods)
             build(subHost)
 
             local open = false
@@ -2169,17 +2164,14 @@ function Library:CreateWindow(opts)
             Callback = function(v) Library:SetTheme(v) end,
         })
 
-        addTriggerRow("HUD", function(sub)
-            sub:AddToggle({
-                Name = "Info Bar", Default = true, Flag = "ui_infobar", CheckboxRight = true,
-                Callback = function(v) Library:SetInfoBar(v) end,
-            })
-            sub:AddToggle({
-                Name = "Keybinds List", Default = true, Flag = "ui_keybinds", CheckboxRight = true,
-                Callback = function(v) Library:SetKeybindList(v) end,
-            })
-        end)
-
+        host:AddToggle({
+            Name = "Info Bar", Default = true, Flag = "ui_infobar", CheckboxRight = true,
+            Callback = function(v) Library:SetInfoBar(v) end,
+        })
+        host:AddToggle({
+            Name = "Keybinds List", Default = true, Flag = "ui_keybinds", CheckboxRight = true,
+            Callback = function(v) Library:SetKeybindList(v) end,
+        })
         host:AddToggle({
             Name = "Notifications", Default = true, Flag = "ui_notifications", CheckboxRight = true,
             Callback = function(v) Library:SetNotifications(v) end,
@@ -2188,7 +2180,9 @@ function Library:CreateWindow(opts)
             Name = "Hide Info", Default = false, Flag = "ui_hideinfo", CheckboxRight = true,
             Callback = function(v)
                 if footerNameLbl and footerNameLbl.Parent then
-                    footerNameLbl.Visible = not v
+                    footerNameLbl.Text = v
+                        and string.rep("*", math.max(3, #LocalPlayer.Name))
+                        or LocalPlayer.Name
                 end
             end,
         })
@@ -2203,13 +2197,6 @@ function Library:CreateWindow(opts)
             isOpen = open
             if open then
                 local sc = Library._scale or 1
-                popScale.Scale = sc
-                local gPos = gearBtn.AbsolutePosition
-                local gSize = gearBtn.AbsoluteSize
-                popup.Position = UDim2.fromOffset(
-                    gPos.X + gSize.X - POPUP_W * sc - 4,
-                    gPos.Y + gSize.Y + 6
-                )
                 dim.Visible = true
                 tween(dim, { BackgroundTransparency = 0.45 }, 0.18)
                 catcher.Visible = true
