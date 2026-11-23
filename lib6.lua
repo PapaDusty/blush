@@ -346,7 +346,7 @@ local function makeArrow(parent, size, color, position, anchorPoint, zindex)
             task.delay(0.09, function()
                 if mine ~= token or not img.Parent then return end
                 img.Image = url
-                holder.Rotation = open and -90 or 90
+                holder.Rotation = 90
                 tween(holder, { Rotation = 0 }, 0.11, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
             end)
         else
@@ -559,11 +559,10 @@ local function createToggle(host, opts)
 
     local check = new("ImageLabel", {
         BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(10, 10),
+        Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(12, 12),
         Image = "rbxassetid://83827110621355", ImageColor3 = Color3.new(0, 0, 0),
         ImageTransparency = 1,
     }, box)
-    local boxGlow = new("UIStroke", { Color = Theme.Accent, Thickness = 1.5, Transparency = 1 }, box)
 
     local labelColor = opts.Danger and Theme.Danger or Theme.Text
     local label = new("TextLabel", {
@@ -607,17 +606,14 @@ local function createToggle(host, opts)
         if value then
             tween(box, { BackgroundColor3 = Theme.Accent }, t)
             tween(check, { ImageTransparency = 0 }, t)
-            tween(boxGlow, { Transparency = 0.35 }, t)
         else
             tween(box, { BackgroundColor3 = Theme.Input }, t)
             tween(check, { ImageTransparency = 1 }, t)
-            tween(boxGlow, { Transparency = 1 }, t)
         end
     end
 
     onAccentChange(function(c)
         if box and box.Parent then box.BackgroundColor3 = value and c or Theme.Input end
-        if boxGlow.Parent then boxGlow.Color = c end
     end)
 
     function control:Set(v)
@@ -705,6 +701,8 @@ local function createToggle(host, opts)
                         [Enum.UserInputType.MouseButton1] = { Enum.UserInputType.MouseButton1, "MB1" },
                         [Enum.UserInputType.MouseButton2] = { Enum.UserInputType.MouseButton2, "MB2" },
                         [Enum.UserInputType.MouseButton3] = { Enum.UserInputType.MouseButton3, "MB3" },
+                        [Enum.UserInputType.MouseButton4] = { Enum.UserInputType.MouseButton4, "MB4" },
+                        [Enum.UserInputType.MouseButton5] = { Enum.UserInputType.MouseButton5, "MB5" },
                     }
                     local e = map[input.UserInputType]
                     bindKey, bindName = e[1], e[2]
@@ -803,7 +801,6 @@ local function createSlider(host, opts)
         BackgroundColor3 = Theme.Accent, Size = UDim2.new(0, 0, 1, 0),
     }, track)
     new("UICorner", { CornerRadius = UDim.new(1, 0) }, fill)
-    local fillGlow = new("UIStroke", { Color = Theme.Accent, Thickness = 1.5, Transparency = 0.4 }, fill)
 
     local thumb = new("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0),
@@ -813,7 +810,6 @@ local function createSlider(host, opts)
 
     onAccentChange(function(c)
         if fill and fill.Parent then fill.BackgroundColor3 = c end
-        if fillGlow.Parent then fillGlow.Color = c end
     end)
 
     local control = { Frame = row, Flag = flag }
@@ -917,7 +913,7 @@ local function createDropdown(host, opts)
 
     local box = new("TextButton", {
         BackgroundColor3 = Theme.Input, AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(1, -(nameW + 8), 0, 24),
+        Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(1, -149, 0, 24),
         AutoButtonColor = false, Text = "",
     }, row)
     new("UICorner", { CornerRadius = UDim.new(0, 6) }, box)
@@ -928,7 +924,7 @@ local function createDropdown(host, opts)
         TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Text = "",
     }, box)
 
-    local arrow = makeArrow(box, 16, Theme.Muted, UDim2.new(1, -20, 0.5, 0), Vector2.new(0.5, 0.5), 2)
+    local arrow = makeArrow(box, 16, Theme.Muted, UDim2.new(1, -14, 0.5, 0), Vector2.new(0.5, 0.5), 2)
 
     local control = { Frame = row, Flag = flag }
     local value = opts.Default
@@ -983,15 +979,12 @@ local function createDropdown(host, opts)
 
         local absPos = box.AbsolutePosition
         local absSize = box.AbsoluteSize
-        local screenH = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720
-
-        local openUp = absPos.Y + absSize.Y + 4 + listH * scale > screenH - 8
         listW = absSize.X / scale
 
         listHolder = new("ScrollingFrame", {
             BackgroundColor3 = Theme.Input,
-            AnchorPoint = Vector2.new(0, openUp and 1 or 0),
-            Position = UDim2.fromOffset(absPos.X, openUp and (absPos.Y - 4) or (absPos.Y + absSize.Y + 4)),
+            AnchorPoint = Vector2.new(0, 0),
+            Position = UDim2.fromOffset(absPos.X, absPos.Y + absSize.Y),
             Size = UDim2.new(0, listW, 0, instant and listH or 0),
             ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Muted,
             CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -1142,6 +1135,10 @@ local function createKeybindRow(host, opts)
                 bindKey, bindName = Enum.UserInputType.MouseButton2, "MB2"
             elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
                 bindKey, bindName = Enum.UserInputType.MouseButton3, "MB3"
+            elseif input.UserInputType == Enum.UserInputType.MouseButton4 then
+                bindKey, bindName = Enum.UserInputType.MouseButton4, "MB4"
+            elseif input.UserInputType == Enum.UserInputType.MouseButton5 then
+                bindKey, bindName = Enum.UserInputType.MouseButton5, "MB5"
             else
                 return
             end
@@ -1442,17 +1439,7 @@ function Library:_refreshBinds()
         }, r)
     end
 
-    local empty = #entries == 0
-    if empty ~= bindsEmpty then
-        bindsEmpty = empty
-        if empty then
-            tween(bindsPanel, { BackgroundTransparency = 1 }, 0.18)
-        else
-            tween(bindsPanel, { BackgroundTransparency = 0 }, 0.18)
-        end
-    elseif not empty then
-        bindsPanel.BackgroundTransparency = 0
-    end
+    bindsPanel.BackgroundTransparency = 0
 end
 
 -- keep the enabled rows in the accent colour when the theme changes
@@ -2010,7 +1997,7 @@ function Library:CreateWindow(opts)
         local dim = new("Frame", {
             Name = "SettingsDim", BackgroundColor3 = Color3.new(0, 0, 0),
             BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
-            BorderSizePixel = 0, Visible = false, ZIndex = 50,
+            BorderSizePixel = 0, Active = true, Visible = false, ZIndex = 50,
         }, main)
 
         local catcher = new("TextButton", {
@@ -2023,7 +2010,7 @@ function Library:CreateWindow(opts)
             AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, HEADER_H + 4),
             Size = UDim2.new(0, POPUP_W, 0, 0), ClipsDescendants = true,
             BackgroundColor3 = Theme.Card, Visible = false, ZIndex = 60,
-        }, content)
+        }, main)
         new("UICorner", { CornerRadius = UDim.new(0, 10) }, popup)
 
         local rowsFrame = new("Frame", {
@@ -2523,6 +2510,9 @@ function PageMethods:AddCard(opts)
     }, headerRow)
 
     local hIcon = makeIcon(headerRow, opts.Icon, 18, Theme.Accent, UDim2.new(0, 0, 0.5, -9), nil, 7)
+    onAccentChange(function(c)
+        if hIcon.Parent then setIconColor(hIcon, c) end
+    end)
     new("TextLabel", {
         BackgroundTransparency = 1, Position = UDim2.new(0, 28, 0, 0),
         Size = UDim2.new(1, -56, 1, 0), Font = FONT_SEMI, TextSize = T(13),
