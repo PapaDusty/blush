@@ -217,20 +217,14 @@ end
 --============================================================================
 local Icons = {
     -- built-in UI icons
-    logo      = "rbxassetid://88968374981330",   -- menu logo
-    settings  = "rbxassetid://84360896671248",   -- settings gear (next to the search bar)
-    arrowDown = "rbxassetid://118775691894307",  -- unexpanded / collapsed
-    arrowUp   = "rbxassetid://136920335013389",  -- expanded
+    logo      = "rbxassetid://109028225963082",   -- menu logo
+    settings  = "rbxassetid://95053139392931",   -- settings gear (next to the search bar)
+    arrowDown = "rbxassetid://108073942533855",  -- unexpanded / collapsed
+    arrowUp   = "rbxassetid://71112668146535",  -- expanded
     resize    = "rbxassetid://90927792586571",   -- window resize grip
 
     -- >>> put your own ids here (or pass Icon = "rbxassetid://..." / a number anywhere) <<<
-    home      = "",
-    search    = "",
-    user      = "",
-    sparkle   = "",
-    sliders   = "",
-    shield    = "",
-    dot       = "",
+    placeholder      = "79488381804566",
 }
 Library.Icons = Icons
 
