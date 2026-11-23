@@ -957,8 +957,7 @@ local function createDropdown(host, opts)
         value = type(value) == "table" and value or {}
     end
 
-    local listHolder, catcher
-    local listW = 0
+    local listHolder
 
     local function displayText()
         if multi then
@@ -974,15 +973,14 @@ local function createDropdown(host, opts)
     end
 
     local function closeList(instant)
-        local lh, ct = listHolder, catcher
-        listHolder, catcher = nil, nil
-        if ct then ct:Destroy() end
+        local lh = listHolder
+        listHolder = nil
         arrow:Set(false, not instant)
         if lh then
             if instant then
                 lh:Destroy()
             else
-                tween(lh, { Size = UDim2.new(0, listW, 0, 0) }, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+                tween(lh, { Size = UDim2.new(1, 0, 0, 0) }, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
                 task.delay(0.16, function() if lh then lh:Destroy() end end)
             end
         end
@@ -992,30 +990,15 @@ local function createDropdown(host, opts)
         if listHolder then closeList(); return end
         arrow:Set(true, not instant)
 
-        catcher = new("TextButton", {
-            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
-            Text = "", AutoButtonColor = false, ZIndex = 629,
-        }, gui)
-        connect(catcher.MouseButton1Click, function() closeList() end)
-
-        local scale = Library._scale or 1
         local rowH = 26
         local listH = math.min(#options * rowH + 8, 180)
 
-        local absPos = box.AbsolutePosition
-        local absSize = box.AbsoluteSize
-        listW = absSize.X / scale
-
         listHolder = new("ScrollingFrame", {
-            BackgroundColor3 = Theme.Input,
-            AnchorPoint = Vector2.new(0, 0),
-            Position = UDim2.fromOffset(absPos.X, absPos.Y + absSize.Y),
-            Size = UDim2.new(0, listW, 0, instant and listH or 0),
+            BackgroundColor3 = Theme.Input, Size = UDim2.new(1, 0, 0, instant and listH or 0),
             ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Muted,
             CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            BorderSizePixel = 0, ZIndex = 630,
-        }, gui)
-        new("UIScale", { Scale = scale }, listHolder)
+            BorderSizePixel = 0, LayoutOrder = 3, ZIndex = 6,
+        }, row)
         new("UICorner", { CornerRadius = UDim.new(0, 6) }, listHolder)
         new("UIPadding", {
             PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4),
@@ -1024,7 +1007,7 @@ local function createDropdown(host, opts)
         new("UIListLayout", { Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder }, listHolder)
 
         if not instant then
-            tween(listHolder, { Size = UDim2.new(0, listW, 0, listH) }, 0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            tween(listHolder, { Size = UDim2.new(1, 0, 0, listH) }, 0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
         end
 
         for i, opt in ipairs(options) do
@@ -1033,7 +1016,7 @@ local function createDropdown(host, opts)
 
             local item = new("TextButton", {
                 BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rowH),
-                Text = "", AutoButtonColor = false, LayoutOrder = i, ZIndex = 631,
+                Text = "", AutoButtonColor = false, LayoutOrder = i, ZIndex = 7,
             }, listHolder)
 
             local lbl = new("TextLabel", {
@@ -1759,11 +1742,10 @@ function Library:CreateWindow(opts)
         }, main)
     end
 
-    local uiScale = new("UIScale", { Scale = 0.97 }, main)
+    local uiScale = new("UIScale", { Scale = 1 }, main)
     main.BackgroundTransparency = 0
     main.GroupTransparency = 1
     tween(main, { GroupTransparency = 0 }, 0.18)
-    tween(uiScale, { Scale = 1 }, 0.18)
 
     -- sidebar ----------------------------------------------------------------
     local sidebar = new("Frame", {
@@ -1946,8 +1928,8 @@ function Library:CreateWindow(opts)
 
     local pageHolder = new("Frame", {
         Name = "PageHolder",
-        Position = UDim2.new(0, 0, 0, HEADER_H),
-        Size = UDim2.new(1, 0, 1, -HEADER_H),
+        Position = UDim2.new(0, 0, 0, HEADER_H - 12),
+        Size = UDim2.new(1, 0, 1, -(HEADER_H - 12)),
         BackgroundTransparency = 1,
         ZIndex = 3,
     }, content)
@@ -2212,6 +2194,7 @@ function Library:CreateWindow(opts)
         end)
 
         addTriggerRow("Theme", "rbxassetid://125466825378195", function(sub)
+            local labels = {}
             for _, th in ipairs(Library.Themes) do
                 local item = new("TextButton", {
                     BackgroundTransparency = 1, BackgroundColor3 = Theme.Input,
@@ -2223,6 +2206,7 @@ function Library:CreateWindow(opts)
                     TextColor3 = (Library._themeName == th.Name) and Theme.Accent or Theme.Text,
                     TextXAlignment = Enum.TextXAlignment.Left, Text = th.Name,
                 }, item)
+                labels[th.Name] = lbl
                 if Library._themeName == th.Name then accent(lbl, "TextColor3") end
                 connect(item.MouseEnter, function()
                     tween(item, { BackgroundTransparency = 0.92 }, 0.1)
@@ -2233,6 +2217,9 @@ function Library:CreateWindow(opts)
                 end)
                 connect(item.MouseButton1Click, function()
                     Library:SetTheme(th.Name)
+                    for _, l in pairs(labels) do
+                        l.TextColor3 = Theme.Text
+                    end
                     lbl.TextColor3 = Theme.Accent
                 end)
             end
@@ -2263,6 +2250,11 @@ function Library:CreateWindow(opts)
                         or LocalPlayer.Name
                 end
             end,
+        })
+
+        host:AddKeybind({
+            Name = "Menu", Default = Library._toggleKey, Flag = "ui_menukey",
+            Callback = function(key) Library:SetToggleKey(key) end,
         })
 
         local function setOpen(open)
@@ -2365,14 +2357,11 @@ function Library:CreateWindow(opts)
             Window._closed = false
             holder.Visible = true
             main.GroupTransparency = 1
-            uiScale.Scale = 0.97
             tween(main, { GroupTransparency = 0 }, 0.18)
-            tween(uiScale, { Scale = 1 }, 0.18)
         else
             Window._closed = true
             if Window.Settings then Window.Settings.Close() end
             tween(main, { GroupTransparency = 1 }, 0.16)
-            tween(uiScale, { Scale = 0.97 }, 0.16)
             task.delay(0.18, function()
                 if Window._closed then holder.Visible = false end
             end)
