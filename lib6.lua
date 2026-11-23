@@ -26,8 +26,6 @@ local function tryCall(fn, ...)
 end
 
 local MarketplaceService = tryCall(function() return game:GetService("MarketplaceService") end)
-local HttpService        = tryCall(function() return game:GetService("HttpService") end)
-local ContentProvider    = tryCall(function() return game:GetService("ContentProvider") end)
 
 -- executor globals, all guarded ------------------------------------------------
 local cloneref = (function()
@@ -263,20 +261,6 @@ local function normalizeId(v)
     return nil
 end
 
--- converts any asset/decal/texture id into a url an ImageLabel can display
-local function fetchThumbnailUrl(num)
-    local decoded = tryCall(function()
-        return HttpService:JSONDecode(game:HttpGet(
-            "https://thumbnails.roblox.com/v1/assets?assetIds=" .. num .. "&size=150x150&format=Png"
-        ))
-    end)
-    if type(decoded) == "table" and decoded.data and decoded.data[1]
-        and decoded.data[1].state == "Completed" and type(decoded.data[1].imageUrl) == "string" then
-        return decoded.data[1].imageUrl
-    end
-    return nil
-end
-
 local function buildRing(holder, color, zindex)
     local ring = new("Frame", {
         Name = "IconRing",
@@ -334,7 +318,7 @@ local function makeIcon(parent, def, size, color, position, anchorPoint, zindex)
 
     local resolved = resolveIcon(def)
     if resolved then
-        local img = new("ImageLabel", {
+        new("ImageLabel", {
             Name = "IconImage",
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
@@ -343,47 +327,6 @@ local function makeIcon(parent, def, size, color, position, anchorPoint, zindex)
             ScaleType = Enum.ScaleType.Fit,
             ZIndex = holder.ZIndex,
         }, holder)
-
-        -- decal/texture ids are converted through the thumbnail api; anything
-        -- that still fails falls back to the placeholder ring
-        task.spawn(function()
-            for _, url in ipairs(resolved.Candidates) do
-                local num = tostring(url):match("(%d+)")
-                local thumb = num and fetchThumbnailUrl(num) or nil
-                if thumb and img.Parent then
-                    img.Image = thumb
-                    local ring = holder:FindFirstChild("IconRing")
-                    if ring then ring:Destroy() end
-                    return
-                end
-            end
-
-            if not ContentProvider or not img.Parent then return end
-            local statusById = {}
-            local ok = pcall(function()
-                ContentProvider:PreloadAsync(resolved.Candidates, function(u, s)
-                    local num = tostring(u):match("(%d+)")
-                    if num then statusById[num] = s end
-                end)
-            end)
-            if not ok or not img.Parent then return end
-            local good, bad = nil, false
-            for _, url in ipairs(resolved.Candidates) do
-                local num = tostring(url):match("(%d+)")
-                local st = num and statusById[num] or nil
-                if st == Enum.AssetFetchStatus.Success then
-                    good = good or url
-                elseif st ~= nil then
-                    bad = true
-                end
-            end
-            if good then
-                if img.Image ~= good then img.Image = good end
-            elseif bad then
-                img:Destroy()
-                buildRing(holder, color, holder.ZIndex)
-            end
-        end)
     else
         buildRing(holder, color)
     end
@@ -497,14 +440,6 @@ do
     for _, l in ipairs(warm) do pcall(function() l:Destroy() end) end
 end
 
--- layers
-local overlayLayer = new("Frame", {
-    Name = "Overlay",
-    BackgroundTransparency = 1,
-    Size = UDim2.fromScale(1, 1),
-    ZIndex = 500,
-}, gui)
-
 local notifyHolder = new("Frame", {
     Name = "Notifs",
     AnchorPoint = Vector2.new(1, 1),
@@ -546,7 +481,7 @@ function Library:Notify(opts)
         LayoutOrder = notifyOrder,
         ZIndex = 801,
     }, notifyHolder)
-    new("UICorner", { CornerRadius = UDim.new(0, 12) }, card)
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, card)
     local stroke = new("UIStroke", {
         Color = Theme.Divider, Transparency = 0.92, Thickness = 1,
     }, card)
@@ -648,7 +583,7 @@ local function createToggle(host, opts)
         AnchorPoint = opts.CheckboxRight and Vector2.new(1, 0.5) or Vector2.new(0, 0.5),
         BackgroundColor3 = Theme.Input,
     }, row)
-    new("UICorner", { CornerRadius = UDim.new(0, 7) }, box)
+    new("UICorner", { CornerRadius = UDim.new(0, 5) }, box)
 
     local check = new("TextLabel", {
         BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
@@ -744,7 +679,7 @@ local function createToggle(host, opts)
             Text = "", TextSize = T(11), Font = FONT_MED,
             TextColor3 = Theme.Muted,
         }, chipHolder)
-        new("UICorner", { CornerRadius = UDim.new(0, 6) }, chip)
+        new("UICorner", { CornerRadius = UDim.new(0, 4) }, chip)
 
         local bindKey, bindName = nil, nil
         local listening = false
@@ -874,7 +809,7 @@ local function createSlider(host, opts)
     local valueLbl = new("TextLabel", {
         BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 64, 0, 22),
-        Font = FONT_MED, TextSize = T(13), TextColor3 = Theme.Muted,
+        Font = FONT_MED, TextSize = T(14), TextColor3 = Theme.Muted,
         TextXAlignment = Enum.TextXAlignment.Right, Text = "",
     }, row)
 
@@ -990,30 +925,30 @@ local function createDropdown(host, opts)
     local options = opts.Options or {}
     local multi = opts.Multi == true
 
-    -- the name and the dropdown bar sit on the same row, like a toggle
     local row = new("Frame", {
-        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 28),
+        AutomaticSize = Enum.AutomaticSize.Y,
     }, host.RowsFrame)
     markRow(host, row, opts.Name)
 
     local nameLbl = new("TextLabel", {
-        BackgroundTransparency = 1, Size = UDim2.new(0, 0, 1, 0),
-        Font = FONT_MED, TextSize = T(13), TextColor3 = Theme.Text, -- same size as toggle labels
+        BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 28),
+        Font = FONT_MED, TextSize = T(14), TextColor3 = Theme.Text,
         TextXAlignment = Enum.TextXAlignment.Left, Text = opts.Name or "Dropdown",
     }, row)
-    local nameW = textWidth(nameLbl.Text, T(13), FONT_MED) + 8
-    nameLbl.Size = UDim2.new(0, nameW, 1, 0)
+    local nameW = textWidth(nameLbl.Text, T(14), FONT_MED) + 8
+    nameLbl.Size = UDim2.new(0, nameW, 0, 28)
 
     local box = new("TextButton", {
-        BackgroundColor3 = Theme.Input, AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(1, -(nameW + 8), 0, 26),
+        BackgroundColor3 = Theme.Input, AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(1, -(nameW + 8), 0, 24),
         AutoButtonColor = false, Text = "",
     }, row)
-    new("UICorner", { CornerRadius = UDim.new(0, 10) }, box)
+    new("UICorner", { CornerRadius = UDim.new(0, 6) }, box)
 
     local selLbl = new("TextLabel", {
         BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0),
-        Size = UDim2.new(1, -34, 1, 0), Font = FONT_MED, TextSize = T(13),
+        Size = UDim2.new(1, -34, 1, 0), Font = FONT_MED, TextSize = T(14),
         TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, Text = "",
     }, box)
 
@@ -1025,7 +960,7 @@ local function createDropdown(host, opts)
         value = type(value) == "table" and value or {}
     end
 
-    local listHolder, catcher
+    local listHolder
 
     local function displayText()
         if multi then
@@ -1040,19 +975,15 @@ local function createDropdown(host, opts)
         selLbl.TextColor3 = (value == nil or (multi and #value == 0)) and Theme.Muted or Theme.Text
     end
 
-    local listW = 0
-
     local function closeList(instant)
-        local lh, ct = listHolder, catcher
-        listHolder, catcher = nil, nil
-        if ct then ct:Destroy() end
+        local lh = listHolder
+        listHolder = nil
         arrow:Set(false, not instant)
         if lh then
             if instant then
                 lh:Destroy()
             else
-                -- collapse animation
-                tween(lh, { Size = UDim2.fromOffset(listW, 0) }, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+                tween(lh, { Size = UDim2.new(1, 0, 0, 0) }, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
                 task.delay(0.16, function() if lh then lh:Destroy() end end)
             end
         end
@@ -1062,47 +993,26 @@ local function createDropdown(host, opts)
         if listHolder then closeList(); return end
         arrow:Set(true, not instant)
 
-        catcher = new("TextButton", {
-            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
-            Text = "", AutoButtonColor = false, ZIndex = 501,
-        }, overlayLayer)
-        connect(catcher.MouseButton1Click, function() closeList() end)
+        local rowH = 26
+        local listH = math.min(#options * rowH + 8, 180)
 
-        local scale = Library._scale or 1          -- the list lives outside the window, so it needs the menu scale too
-        local rowH = 28
-        local listH = math.min(#options * rowH + 8, 200)
-
-        local absPos = box.AbsolutePosition
-        local absSize = box.AbsoluteSize
-        local screenH = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720
-
-        local openUp = absPos.Y + absSize.Y + 4 + listH * scale > screenH - 8
-        listW = absSize.X / scale
-
-        listHolder = new("Frame", {
-            BackgroundColor3 = Theme.Card,
-            AnchorPoint = Vector2.new(0, openUp and 1 or 0),
-            Position = UDim2.fromOffset(absPos.X, openUp and (absPos.Y - 4) or (absPos.Y + absSize.Y + 4)),
-            Size = UDim2.fromOffset(listW, instant and listH or 0),
-            ClipsDescendants = true, ZIndex = 502,
-        }, overlayLayer)
-        new("UIScale", { Scale = scale }, listHolder)
-        new("UICorner", { CornerRadius = UDim.new(0, 12) }, listHolder)
-        new("UIStroke", { Color = Theme.Divider, Transparency = 0.9, Thickness = 1 }, listHolder)
-        new("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4) }, listHolder)
-
-        -- expand animation
-        if not instant then
-            tween(listHolder, { Size = UDim2.fromOffset(listW, listH) }, 0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-        end
-
-        local scroll = new("ScrollingFrame", {
-            BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, listH - 8),
-            CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        listHolder = new("ScrollingFrame", {
+            BackgroundColor3 = Theme.Input, Position = UDim2.new(0, 0, 0, 28),
+            Size = UDim2.new(1, 0, 0, instant and listH or 0),
             ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Muted,
-            BorderSizePixel = 0, ZIndex = 503,
+            CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            BorderSizePixel = 0, ZIndex = 6,
+        }, row)
+        new("UICorner", { CornerRadius = UDim.new(0, 6) }, listHolder)
+        new("UIPadding", {
+            PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4),
+            PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4),
         }, listHolder)
-        new("UIListLayout", { Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder }, scroll)
+        new("UIListLayout", { Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder }, listHolder)
+
+        if not instant then
+            tween(listHolder, { Size = UDim2.new(1, 0, 0, listH) }, 0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        end
 
         for i, opt in ipairs(options) do
             local optStr = tostring(opt)
@@ -1110,29 +1020,20 @@ local function createDropdown(host, opts)
 
             local item = new("TextButton", {
                 BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rowH),
-                Text = "", AutoButtonColor = false, LayoutOrder = i, ZIndex = 504,
-            }, scroll)
-            item.Size = UDim2.new(1, 0, 0, rowH)
+                Text = "", AutoButtonColor = false, LayoutOrder = i, ZIndex = 7,
+            }, listHolder)
 
             local lbl = new("TextLabel", {
-                BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0),
-                Size = UDim2.new(1, -20, 1, 0), Font = FONT_MED, TextSize = T(13),
+                BackgroundTransparency = 1, Position = UDim2.new(0, 6, 0, 0),
+                Size = UDim2.new(1, -12, 1, 0), Font = FONT_MED, TextSize = T(14),
                 TextColor3 = isSel and Theme.Accent or Theme.Text,
-                TextXAlignment = Enum.TextXAlignment.Left, Text = optStr, ZIndex = 505,
+                TextXAlignment = Enum.TextXAlignment.Left, Text = optStr, ZIndex = 8,
             }, item)
-            if not instant then
-                -- options fade in one after another
-                lbl.TextTransparency = 1
-                task.delay(0.03 * i, function()
-                    if lbl and lbl.Parent then tween(lbl, { TextTransparency = 0 }, 0.18) end
-                end)
-            end
-
             if isSel then accent(lbl, "TextColor3") end
 
             connect(item.MouseEnter, function()
                 tween(item, { BackgroundTransparency = 0.92 }, 0.1)
-                item.BackgroundColor3 = Theme.Input
+                item.BackgroundColor3 = Theme.Card
             end)
             connect(item.MouseLeave, function()
                 tween(item, { BackgroundTransparency = 1 }, 0.1)
@@ -1200,7 +1101,7 @@ local function createKeybindRow(host, opts)
         Size = UDim2.fromOffset(40, 22), Text = "", Font = FONT_MED, TextSize = T(11),
         TextColor3 = Theme.Muted,
     }, row)
-    new("UICorner", { CornerRadius = UDim.new(0, 6) }, chip)
+    new("UICorner", { CornerRadius = UDim.new(0, 4) }, chip)
 
     local control = { Frame = row, Flag = flag }
     local bindKey, bindName, listening, listenConn
@@ -1295,7 +1196,7 @@ local function createButton(host, opts)
         AutoButtonColor = false, Text = "", TextSize = T(12), Font = FONT_MED,
         TextColor3 = Theme.Text,
     }, row)
-    new("UICorner", { CornerRadius = UDim.new(0, 10) }, btn)
+    new("UICorner", { CornerRadius = UDim.new(0, 6) }, btn)
     new("TextLabel", {
         BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
         Font = FONT_MED, TextSize = T(12),
@@ -1418,7 +1319,7 @@ local function buildInfoBar()
         BackgroundColor3 = Theme.Card,
         ZIndex = 400,
     }, gui)
-    new("UICorner", { CornerRadius = UDim.new(0, 12) }, infoBar)
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, infoBar)
     new("UIPadding", {
         PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12),
         PaddingTop = UDim.new(0, 0), PaddingBottom = UDim.new(0, 0),
@@ -1435,29 +1336,32 @@ local function buildInfoBar()
         order = order + 1
         local lbl = new("TextLabel", {
             BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 38),
-            AutomaticSize = Enum.AutomaticSize.X, Font = font or FONT_MED, TextSize = T(12),
+            AutomaticSize = Enum.AutomaticSize.X, Font = font or FONT_MED, TextSize = T(13),
             TextColor3 = color, Text = "", LayoutOrder = order, ZIndex = 401,
         }, infoBar)
         infoLabels[key] = lbl
         return lbl
     end
-    local function addDivider()
+    local function addSeparator()
         order = order + 1
-        new("Frame", {
-            BackgroundColor3 = Theme.Divider, BackgroundTransparency = 0.9,
-            Size = UDim2.fromOffset(1, 16), LayoutOrder = order, ZIndex = 401,
+        new("TextLabel", {
+            BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 38),
+            AutomaticSize = Enum.AutomaticSize.X, Font = FONT_MED, TextSize = T(13),
+            TextColor3 = Theme.Hint, Text = "|", LayoutOrder = order, ZIndex = 401,
         }, infoBar)
     end
 
-    addLabel("brand", Theme.Accent, FONT_SEMI) -- only the watermark is bold
-    addDivider()
+    addLabel("open", Theme.Hint).Text = "["
+    addLabel("brand", Theme.Accent, FONT_SEMI)
+    addSeparator()
     addLabel("game", Theme.Muted)
-    addDivider()
+    addSeparator()
     addLabel("fps", Theme.Muted)
-    addDivider()
+    addSeparator()
     addLabel("ping", Theme.Muted)
-    addDivider()
+    addSeparator()
     addLabel("clock", Theme.Muted)
+    addLabel("close", Theme.Hint).Text = "]"
 
     onAccentChange(function(c)
         if infoLabels.brand then infoLabels.brand.TextColor3 = c end
@@ -1477,7 +1381,7 @@ local function buildBindsPanel()
         BackgroundTransparency = 1,
         ZIndex = 400,
     }, gui)
-    new("UICorner", { CornerRadius = UDim.new(0, 12) }, bindsPanel)
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, bindsPanel)
 
     local title = new("TextLabel", {
         BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 10),
@@ -1533,14 +1437,14 @@ function Library:_refreshBinds()
         }, bindsRowsHolder)
         new("TextLabel", {
             BackgroundTransparency = 1, Size = UDim2.new(0.6, 0, 1, 0),
-            Font = FONT_MED, TextSize = T(11),
+            Font = FONT_MED, TextSize = T(13),
             TextColor3 = e.enabled and Theme.Accent or Theme.Muted,
             TextXAlignment = Enum.TextXAlignment.Left, Text = e.name,
         }, r)
         new("TextLabel", {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0),
             Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0.4, 0, 1, 0),
-            Font = FONT_MED, TextSize = T(11),
+            Font = FONT_MED, TextSize = T(13),
             TextColor3 = e.enabled and Theme.Accent or Theme.Muted,
             TextXAlignment = Enum.TextXAlignment.Right, Text = "[" .. e.key .. "]",
         }, r)
@@ -1687,7 +1591,7 @@ function Library:CreateWindow(opts)
         GroupTransparency = 0,
         ZIndex = 2,
     }, holder)
-    new("UICorner", { CornerRadius = UDim.new(0, 16) }, main)
+    new("UICorner", { CornerRadius = UDim.new(0, 10) }, main)
 
     if not glow then
         new("UIStroke", {
@@ -1709,7 +1613,18 @@ function Library:CreateWindow(opts)
         BorderSizePixel = 0,
         ZIndex = 3,
     }, main)
-    new("UICorner", { CornerRadius = UDim.new(0, 16) }, sidebar)
+    new("UICorner", { CornerRadius = UDim.new(0, 10) }, sidebar)
+    -- square off the right corners so the sidebar meets the content area cleanly
+    for _, anchor in ipairs({ Vector2.new(1, 0), Vector2.new(1, 1) }) do
+        new("Frame", {
+            AnchorPoint = anchor,
+            Position = UDim2.fromScale(anchor.X, anchor.Y),
+            Size = UDim2.fromOffset(10, 10),
+            BackgroundColor3 = Theme.Sidebar,
+            BorderSizePixel = 0,
+            ZIndex = 3,
+        }, sidebar)
+    end
 
     local brand = new("Frame", {
         Name = "Brand",
@@ -1718,17 +1633,19 @@ function Library:CreateWindow(opts)
         ZIndex = 4,
     }, sidebar)
 
-    local logoTint = opts.LogoTint ~= false
-    local logo = makeIcon(brand, opts.Logo or "logo", 24, logoTint and Theme.Accent or Color3.new(1, 1, 1),
-        UDim2.fromOffset(17, 16))
     local logoBg = new("Frame", {
         Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(12, 10),
         BackgroundColor3 = Theme.Card, ZIndex = 4,
     }, brand)
-    new("UICorner", { CornerRadius = UDim.new(0, 10) }, logoBg)
-    logo.ZIndex = 5
-    if logoTint then
-        onAccentChange(function(c) if logo.Parent then setIconColor(logo, c) end end)
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, logoBg)
+    local logoDef = resolveIcon(opts.Logo or "logo")
+    if logoDef then
+        local logoImg = new("ImageLabel", {
+            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
+            Image = logoDef.Candidates[1], ImageColor3 = Color3.new(1, 1, 1),
+            ScaleType = Enum.ScaleType.Fit, ZIndex = 5,
+        }, logoBg)
+        new("UICorner", { CornerRadius = UDim.new(0, 8) }, logoImg)
     end
 
     local brandNameLbl = new("TextLabel", {
@@ -2108,7 +2025,8 @@ function Library:CreateWindow(opts)
             Size = UDim2.new(0, POPUP_W, 0, 0), ClipsDescendants = true,
             BackgroundColor3 = Theme.Card, Visible = false, ZIndex = 60,
         }, content)
-        new("UICorner", { CornerRadius = UDim.new(0, 16) }, popup)
+        new("UICorner", { CornerRadius = UDim.new(0, 10) }, popup)
+        accent(new("UIStroke", { Thickness = 1, Transparency = 0.4 }, popup), "Color")
 
         local rowsFrame = new("Frame", {
             BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
@@ -2122,6 +2040,13 @@ function Library:CreateWindow(opts)
 
         local host = extend({ RowsFrame = rowsFrame, _rows = {} }, ControlMethods)
 
+        -- keep the popup tall enough when an inline dropdown expands inside it
+        connect(rowsFrame:GetPropertyChangedSignal("AbsoluteSize"), function()
+            if isOpen then
+                popup.Size = UDim2.new(0, POPUP_W, 0, rowsFrame.AbsoluteSize.Y / (Library._scale or 1))
+            end
+        end)
+
         local submenus = {}
         local function closeSubmenus(except)
             for _, sm in ipairs(submenus) do
@@ -2129,29 +2054,16 @@ function Library:CreateWindow(opts)
             end
         end
 
-        local function anySubmenuOpen()
-            for _, sm in ipairs(submenus) do
-                if sm.IsOpen() then return true end
-            end
-            return false
-        end
-
-        -- the mini boxes open on the right side of the settings box, so the box
-        -- slides left to make room while one is open
-        local function updatePopupShift()
-            local inset = anySubmenuOpen() and (16 + SUB_W + 8) or 16
-            tween(popup, { Position = UDim2.new(1, -inset, 0, HEADER_H + 4) }, 0.22, Enum.EasingStyle.Quint)
-        end
-
         local function addSubmenu(build)
             local sub = new("CanvasGroup", {
                 Name = "SettingsSubmenu",
-                AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -16, 0, HEADER_H + 4),
+                AnchorPoint = Vector2.new(0, 0),
+                Position = UDim2.new(1, -8, 0, HEADER_H + 4),
                 Size = UDim2.new(0, SUB_W, 0, 0), ClipsDescendants = true,
                 BackgroundColor3 = Theme.Card, Visible = false, ZIndex = 61,
             }, content)
-            new("UICorner", { CornerRadius = UDim.new(0, 16) }, sub)
+            new("UICorner", { CornerRadius = UDim.new(0, 10) }, sub)
+            accent(new("UIStroke", { Thickness = 1, Transparency = 0.4 }, sub), "Color")
 
             local subRows = new("Frame", {
                 BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
@@ -2172,7 +2084,6 @@ function Library:CreateWindow(opts)
                 open = true
                 sub.Visible = true
                 sub.Size = UDim2.new(0, SUB_W, 0, 0)
-                updatePopupShift()
                 task.defer(function()
                     if open and sub.Parent then
                         local h = subRows.AbsoluteSize.Y / (Library._scale or 1)
@@ -2185,7 +2096,6 @@ function Library:CreateWindow(opts)
                 if not open then return end
                 open = false
                 tween(sub, { Size = UDim2.new(0, SUB_W, 0, 0) }, 0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-                updatePopupShift()
                 task.delay(0.16, function()
                     if not open and sub.Parent then sub.Visible = false end
                 end)
@@ -2429,7 +2339,7 @@ function SectionMethods:AddTab(opts)
         Position = UDim2.new(0, 0, 0.5, -18),
         Size = UDim2.new(1, 0, 0, 36), ZIndex = 5,
     }, item)
-    new("UICorner", { CornerRadius = UDim.new(0, 12) }, highlight)
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, highlight)
 
     local btn = new("TextButton", {
         BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
@@ -2582,17 +2492,17 @@ function PageMethods:AddCard(opts)
         LayoutOrder = #page.Cards + 1,
         ZIndex = 5,
     }, (column == 2) and page.Col2 or page.Col1)
-    new("UICorner", { CornerRadius = UDim.new(0, 14) }, frame)
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, frame)
 
     local body = new("Frame", {
         BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 5,
     }, frame)
     new("UIPadding", {
-        PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14),
+        PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 8),
         PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14),
     }, body)
-    new("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }, body)
+    new("UIListLayout", { Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder }, body)
 
     -- header
     local headerRow = new("Frame", {
@@ -2615,8 +2525,7 @@ function PageMethods:AddCard(opts)
     local chevron = makeArrow(headerRow, 16, Theme.Muted, UDim2.new(1, -8, 0.5, 0), Vector2.new(0.5, 0.5), 7)
     chevron:Set(true, false)
 
-    -- divider
-    new("Frame", {
+    local divider = new("Frame", {
         BackgroundColor3 = Theme.Divider, BackgroundTransparency = Theme.DividerT,
         Size = UDim2.new(1, 0, 0, 1), LayoutOrder = 2, ZIndex = 6,
     }, body)
@@ -2659,6 +2568,7 @@ function PageMethods:AddCard(opts)
         else
             tween(wrapper, { Size = UDim2.new(1, 0, 0, target) }, 0.26, Enum.EasingStyle.Quint)
         end
+        divider.Visible = not state
         chevron:Set(not state, animate ~= false)
     end
 
