@@ -1515,11 +1515,11 @@ do
             if Library._showInfo and infoLabels.brand then
                 infoLabels.brand.Text = (Library._brandName or "library") .. "."
                 infoLabels.game.Text  = shortName(gameName)
-                infoLabels.fps.Text   = "fps " .. tostring(fps)
+                infoLabels.fps.Text   = tostring(fps) .. " fps"
                 local ping = tryCall(function()
                     return math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
                 end)
-                infoLabels.ping.Text  = "ping " .. tostring(ping or 0)
+                infoLabels.ping.Text  = tostring(ping or 0) .. " ms"
                 local secs = math.floor(os.clock() - sessionStart)
                 infoLabels.clock.Text = string.format("%02d:%02d", math.floor(secs / 60), secs % 60)
             end
