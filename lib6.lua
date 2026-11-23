@@ -495,27 +495,14 @@ local gui = new("ScreenGui", {
 })
 Library.Gui = gui
 
+-- the menu lives directly in CoreGui (no executor hide/protect wrapper), so it
+-- can be found and tweaked at runtime through the executor
 do
-    -- in Roblox Studio the menu is parented to PlayerGui instead, so it shows up
-    -- in the Explorer and can be inspected / tweaked live while playtesting
-    local inStudio = tryCall(function() return RunService:IsStudio() end) == true
-    local parent = nil
-    if not inStudio then
-        parent = getHiddenUI()
-        if not parent then
-            parent = tryCall(function() return game:GetService("CoreGui") end)
-        end
-    end
-    local placed = false
-    if parent then
-        placed = pcall(function() gui.Parent = parent end)
-        if not placed or not gui.Parent then placed = false end
-    end
-    if not placed then
+    local placed = pcall(function()
+        gui.Parent = game:GetService("CoreGui")
+    end)
+    if not placed or not gui.Parent then
         gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    end
-    if not inStudio then
-        protectGui(gui)
     end
 end
 
